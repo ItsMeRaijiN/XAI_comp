@@ -19,12 +19,12 @@ Eight CAM methods grouped by approach:
 - FullGrad — combines input gradients with bias gradients across all layers
 ## Evaluation Metrics
  
-| Metric | What it measures |
-|---|---|
-| Average Drop (%) | Confidence loss when keeping only salient regions |
-| Increase in Confidence (%) | Cases where masking irrelevant regions boosts prediction |
-| Pointing Game | Whether the heatmap maximum falls inside the ground-truth box |
-| Inference Time (ms) | Computational cost per method |
+| Metric                     | What it measures                                              |
+|----------------------------|---------------------------------------------------------------|
+| Average Drop (%)           | Confidence loss when keeping only salient regions             |
+| Increase in Confidence (%) | Cases where masking irrelevant regions boosts prediction      |
+| Pointing Game              | Whether the heatmap maximum falls inside the ground-truth box |
+| Inference Time (ms)        | Computational cost per method                                 |
  
 ## Tech Stack
  
