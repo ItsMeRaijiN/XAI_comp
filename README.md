@@ -28,7 +28,7 @@ Eight CAM methods grouped by approach:
  
 ## Tech Stack
  
-- **PyTorch + torchvision** — pretrained models (ResNet50, VGG16, EfficientNet-B0)
+- **PyTorch + torchvision** — pretrained models (ResNet50, ConvNeXt, EfficientNet-B0)
 - **pytorch-grad-cam** — unified API for all CAM methods
 - **FastAPI** — REST API serving explanations
 - **Gradio** — interactive UI for side-by-side comparison
