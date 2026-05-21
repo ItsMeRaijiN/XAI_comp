@@ -1,0 +1,71 @@
+import base64
+import io
+import json
+import urllib.request
+from contextlib import asynccontextmanager
+import numpy as np
+from fastapi import FastAPI, UploadFile, File, Query
+from fastapi.responses import JSONResponse
+from PIL import Image
+from app.models import get_model_names
+from app.explainers import generate_cam, get_prediction, CAM_METHODS
+from app.metrics import compute_metrics
+
+LABELS: list[str] = []
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    url = "https://raw.githubusercontent.com/anishathalye/imagenet-simple-labels/master/imagenet-simple-labels.json"
+    with urllib.request.urlopen(url) as response:
+        LABELS.extend(json.loads(response.read().decode()))
+    yield
+
+app = FastAPI(title="XAI Comparison API", lifespan=lifespan)
+
+def _numpy_to_base64(img: np.ndarray) -> str:
+    pil_img = Image.fromarray(img)
+    buffer = io.BytesIO()
+    pil_img.save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode()
+
+@app.get("/models")
+def list_models():
+    return {"models": get_model_names()}
+
+@app.post("/analyze")
+async def analyze(
+    file: UploadFile = File(...),
+    model_name: str = Query(default="ResNet50"),
+):
+    image = Image.open(io.BytesIO(await file.read())).convert("RGB")
+
+    class_idx, confidence = get_prediction(image, model_name)
+    class_name = LABELS[class_idx] if LABELS else str(class_idx)
+
+    cam_results = generate_cam(image, model_name, target_class=class_idx)
+
+    methods = []
+    for method_name in CAM_METHODS:
+        result = cam_results[method_name]
+        metrics = compute_metrics(
+            image=image,
+            heatmap=result["heatmap"],
+            model_name=model_name,
+            class_idx=class_idx,
+            original_confidence=confidence,
+            time_ms=result["time_ms"],
+        )
+        methods.append({
+            "name": method_name,
+            "overlay": _numpy_to_base64(result["overlay"]),
+            "metrics": metrics,
+        })
+
+    return JSONResponse({
+        "prediction": {
+            "class_name": class_name,
+            "class_idx": class_idx,
+            "confidence": round(confidence, 4),
+        },
+        "methods": methods,
+    })
