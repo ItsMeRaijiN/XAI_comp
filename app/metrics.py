@@ -1,7 +1,8 @@
 import numpy as np
 import torch
 from PIL import Image
-from app.models import get_model, preprocess
+
+from app.models import get_model, preprocess, get_device
 
 def _resize_heatmap_to_image(heatmap: np.ndarray, size: tuple[int, int]) -> np.ndarray:
     pil = Image.fromarray((heatmap * 255).astype(np.uint8))
@@ -24,7 +25,7 @@ def _masked_confidence(
     masked = (img_array * mask_3ch * 255).astype(np.uint8)
     masked_pil = Image.fromarray(masked)
 
-    input_tensor = preprocess(masked_pil).unsqueeze(0)
+    input_tensor = preprocess(masked_pil).unsqueeze(0).to(get_device())
     with torch.no_grad():
         output = model(input_tensor)
         probs = torch.softmax(output, dim=1)
