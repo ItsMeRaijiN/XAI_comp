@@ -18,18 +18,22 @@ Eight CAM methods grouped by approach:
 - EigenCAM — PCA of activation maps, no class-specific gradients needed
 - FullGrad — combines input gradients with bias gradients across all layers
 ## Evaluation Metrics
- 
-| Metric                     | What it measures                                              |
-|----------------------------|---------------------------------------------------------------|
-| Average Drop (%)           | Confidence loss when keeping only salient regions             |
-| Increase in Confidence (%) | Cases where masking irrelevant regions boosts prediction      |
-| Pointing Game              | Whether the heatmap maximum falls inside the ground-truth box |
-| Inference Time (ms)        | Computational cost per method                                 |
+
+| Metric                   | What it measures                                               | Better  |
+|--------------------------|----------------------------------------------------------------|---------|
+| Average Drop (%)         | Confidence loss when keeping only salient regions              | Lower   |
+| Increase in Confidence   | Whether masking background boosts prediction                   | Higher  |
+| Deletion AUC             | Confidence curve when progressively removing important pixels  | Lower   |
+| Insertion AUC            | Confidence curve when progressively revealing important pixels | Higher  |
+| Sparsity (%)             | How focused the heatmap is (% of active pixels)                | Lower   |
+| Shannon Entropy          | Information spread in the heatmap distribution                 | Lower   |
+| Inter-method correlation | Average pairwise Pearson correlation with other methods        | Context |
+| Inference Time (ms)      | Computational cost per method                                  | Lower   |
  
 ## Tech Stack
  
-- **PyTorch + torchvision** — pretrained models (ResNet50, ConvNeXt, EfficientNet-B0)
+- **PyTorch + torchvision** — pretrained models (ResNet50, EfficientNet-B0, ConvNeXt-Tiny)
 - **pytorch-grad-cam** — unified API for all CAM methods
 - **FastAPI** — REST API serving explanations
-- **Gradio** — interactive UI for side-by-side comparison
-- **Matplotlib / Plotly** — metric visualizations
+- **Gradio** — interactive UI for single image and batch comparison
+- **Matplotlib** — metric visualizations and charts

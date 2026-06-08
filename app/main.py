@@ -1,32 +1,25 @@
 import base64
 import io
-import json
-import urllib.request
-from contextlib import asynccontextmanager
+
 import numpy as np
 from fastapi import FastAPI, UploadFile, File, Query
 from fastapi.responses import JSONResponse
 from PIL import Image
+
+from app.labels import get_labels
 from app.models import get_model_names, get_target_layer_names
 from app.explainers import generate_cam, get_prediction, CAM_METHODS
 from app.metrics import compute_metrics
 
-LABELS: list[str] = []
+app = FastAPI(title="XAI Comparison API")
 
-@asynccontextmanager
-async def lifespan(application: FastAPI):
-    url = "https://raw.githubusercontent.com/anishathalye/imagenet-simple-labels/master/imagenet-simple-labels.json"
-    with urllib.request.urlopen(url) as response:
-        LABELS.extend(json.loads(response.read().decode()))
-    yield
-
-app = FastAPI(title="XAI Comparison API", lifespan=lifespan)
 
 def _numpy_to_base64(img: np.ndarray) -> str:
     pil_img = Image.fromarray(img)
     buffer = io.BytesIO()
     pil_img.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
+
 
 @app.get("/models")
 def list_models():
@@ -43,12 +36,13 @@ async def analyze(
     target_class: int | None = Query(default=None),
     layer_name: str | None = Query(default=None),
 ):
+    labels = get_labels()
     image = Image.open(io.BytesIO(await file.read())).convert("RGB")
 
     class_idx, confidence = get_prediction(image, model_name)
     if target_class is not None:
         class_idx = target_class
-    class_name = LABELS[class_idx] if LABELS else str(class_idx)
+    class_name = labels[class_idx] if labels else str(class_idx)
 
     cam_results = generate_cam(image, model_name, target_class=class_idx, layer_name=layer_name)
 

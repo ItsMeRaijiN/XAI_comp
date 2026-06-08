@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import torch
 from PIL import Image
 from pytorch_grad_cam import (
     GradCAM,
@@ -29,7 +30,7 @@ CAM_METHODS = {
     "FullGrad": FullGrad,
 }
 
-def _resize_heatmap(heatmap: np.ndarray, target_hw: tuple[int, int]) -> np.ndarray:
+def resize_heatmap(heatmap: np.ndarray, target_hw: tuple[int, int]) -> np.ndarray:
     h, w = target_hw
     pil = Image.fromarray((heatmap * 255).astype(np.uint8))
     pil = pil.resize((w, h), Image.Resampling.BILINEAR)
@@ -58,7 +59,7 @@ def generate_cam(
         start = time.perf_counter()
         heatmap = cam(input_tensor=input_tensor, targets=targets)[0]
         elapsed_ms = (time.perf_counter() - start) * 1000
-        heatmap_large = _resize_heatmap(heatmap, display_hw)
+        heatmap_large = resize_heatmap(heatmap, display_hw)
         overlay = show_cam_on_image(rgb_display, heatmap_large, use_rgb=True)
 
         results[method_name] = {
@@ -69,8 +70,18 @@ def generate_cam(
 
     return results
 
+
+def get_class_confidence(
+    image: Image.Image, model_name: str, class_idx: int,
+) -> float:
+    model = get_model(model_name)
+    input_tensor = preprocess(image).unsqueeze(0).to(get_device())
+    with torch.no_grad():
+        probs = torch.softmax(model(input_tensor), dim=1)
+    return probs[0, class_idx].item()
+
+
 def get_prediction(image: Image.Image, model_name: str) -> tuple[int, float]:
-    import torch
     model = get_model(model_name)
     input_tensor = preprocess(image).unsqueeze(0).to(get_device())
 
@@ -81,8 +92,10 @@ def get_prediction(image: Image.Image, model_name: str) -> tuple[int, float]:
 
     return class_idx.item(), confidence.item()
 
-def get_top_predictions(image: Image.Image, model_name: str, k: int = 5) -> list[tuple[int, str, float]]:
-    import torch
+
+def get_top_predictions(
+    image: Image.Image, model_name: str, k: int = 5,
+) -> list[tuple[int, float]]:
     model = get_model(model_name)
     input_tensor = preprocess(image).unsqueeze(0).to(get_device())
 
