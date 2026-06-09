@@ -8,18 +8,16 @@ from PIL import Image
 
 from app.labels import get_labels
 from app.models import get_model_names, get_target_layer_names
-from app.explainers import generate_cam, get_prediction, CAM_METHODS
+from app.explainers import generate_cam, get_prediction, get_class_confidence, CAM_METHODS
 from app.metrics import compute_metrics
 
 app = FastAPI(title="XAI Comparison API")
-
 
 def _numpy_to_base64(img: np.ndarray) -> str:
     pil_img = Image.fromarray(img)
     buffer = io.BytesIO()
     pil_img.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
-
 
 @app.get("/models")
 def list_models():
@@ -42,6 +40,7 @@ async def analyze(
     class_idx, confidence = get_prediction(image, model_name)
     if target_class is not None:
         class_idx = target_class
+        confidence = get_class_confidence(image, model_name, class_idx)
     class_name = labels[class_idx] if labels else str(class_idx)
 
     cam_results = generate_cam(image, model_name, target_class=class_idx, layer_name=layer_name)

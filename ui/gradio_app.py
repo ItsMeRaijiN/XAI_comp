@@ -1,10 +1,6 @@
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 import csv
 import tempfile
+from pathlib import Path
 
 import numpy as np
 import matplotlib
@@ -54,21 +50,14 @@ def on_image_upload(image: Image.Image, model_name: str):
         return gr.update(choices=[], value=None), ""
     image = image.convert("RGB")
     preds = get_top_predictions(image, model_name, k=5)
-    choices = [f"{LABELS[idx]} ({conf * 100:.1f}%)" for idx, conf in preds]
-    return gr.update(choices=choices, value=choices[0]), choices[0]
+    choices = [(f"{LABELS[idx]} ({conf * 100:.1f}%)", idx) for idx, conf in preds]
+    return gr.update(choices=choices, value=choices[0][1]), choices[0][0]
 
-def _parse_target_class(target_class_str: str | None) -> int | None:
-    if not target_class_str:
-        return None
-    class_name = target_class_str.split(" (")[0]
-    return LABELS.index(class_name) if class_name in LABELS else None
-
-def analyze(image: Image.Image, model_name: str, target_class_str: str, layer_name: str):
+def analyze(image: Image.Image, model_name: str, target_class: int | None, layer_name: str):
     if image is None:
         raise gr.Error("Upload an image first.")
 
     image = image.convert("RGB")
-    target_class = _parse_target_class(target_class_str)
 
     if target_class is not None:
         class_idx = target_class
@@ -260,6 +249,7 @@ def _generate_charts(rows, method_names, model_names):
 def build_ui() -> gr.Blocks:
     with gr.Blocks(
         title="XAI Comparison",
+        theme=gr.themes.Soft(),
         analytics_enabled=False,
     ) as demo:
         gr.Markdown(f"# XAI_comp\nCompare 8 Class Activation Mapping methods. Device: **{get_device()}**")
@@ -297,6 +287,11 @@ def build_ui() -> gr.Blocks:
                     inputs=[model_dropdown],
                     outputs=[layer_dropdown],
                 )
+                model_dropdown.change(
+                    fn=on_image_upload,
+                    inputs=[image_input, model_dropdown],
+                    outputs=[target_class_dropdown, prediction_label],
+                )
                 image_input.change(
                     fn=on_image_upload,
                     inputs=[image_input, model_dropdown],
@@ -313,7 +308,7 @@ def build_ui() -> gr.Blocks:
                         cam_outputs.append(gr.Image(label=name, type="numpy"))
 
                 gr.Markdown("## Metrics")
-                with gr.Accordion("Jak interpretować metryki?", open=False):
+                with gr.Accordion("How to interpret metrics?", open=False):
                     gr.Markdown(METRICS_HELP)
                 metrics_table = gr.Dataframe(
                     headers=SINGLE_HEADERS,
@@ -380,7 +375,3 @@ def build_ui() -> gr.Blocks:
                     ],
                 )
     return demo
-
-if __name__ == "__main__":
-    demo = build_ui()
-    demo.launch(theme=gr.themes.Soft(), ssr_mode=False)

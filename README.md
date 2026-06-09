@@ -1,22 +1,23 @@
 # XAI_comp
- 
+
 Quantitative comparison of Class Activation Mapping methods for convolutional neural networks.
- 
+
 ## Methods
- 
+
 Eight CAM methods grouped by approach:
- 
+
 **Gradient-based**
 - GradCAM — weighted activation maps using gradient signal
 - GradCAM++ — improved localization for multiple object instances
 - XGradCAM — axiom-based extension with sensitivity and conservation
+- LayerCAM — pixel-level weighted combination, works on shallow layers
+- FullGrad — combines input gradients with bias gradients across all layers
+
 **Gradient-free**
 - ScoreCAM — perturbation-based, uses forward passes instead of gradients
 - AblationCAM — systematic occlusion of activation channels
-**Other**
-- LayerCAM — pixel-level weighted combination, works on shallow layers
 - EigenCAM — PCA of activation maps, no class-specific gradients needed
-- FullGrad — combines input gradients with bias gradients across all layers
+
 ## Evaluation Metrics
 
 | Metric                   | What it measures                                               | Better  |
@@ -29,11 +30,32 @@ Eight CAM methods grouped by approach:
 | Shannon Entropy          | Information spread in the heatmap distribution                 | Lower   |
 | Inter-method correlation | Average pairwise Pearson correlation with other methods        | Context |
 | Inference Time (ms)      | Computational cost per method                                  | Lower   |
- 
+
 ## Tech Stack
- 
+
 - **PyTorch + torchvision** — pretrained models (ResNet50, EfficientNet-B0, ConvNeXt-Tiny)
 - **pytorch-grad-cam** — unified API for all CAM methods
 - **FastAPI** — REST API serving explanations
 - **Gradio** — interactive UI for single image and batch comparison
 - **Matplotlib** — metric visualizations and charts
+
+## Project Structure
+
+```
+.
+├── run.py            # Gradio UI launcher
+├── app/              # Core logic + REST API
+│   ├── main.py       # FastAPI endpoints (/models, /layers, /analyze)
+│   ├── models.py     # Model registry, preprocessing, target layers
+│   ├── explainers.py # CAM generation for all 8 methods
+│   ├── metrics.py    # Faithfulness and localization metrics
+│   └── labels.py     # ImageNet class labels
+└── ui/
+    └── gradio_app.py # Gradio interface (single image + batch tabs)
+```
+
+## Setup
+
+```bash
+pip install torch torchvision grad-cam fastapi uvicorn gradio matplotlib pillow numpy
+```
